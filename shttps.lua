@@ -75,24 +75,6 @@ local function getHeaders(h)
     return hs
 end
 
-
-local Request = {}
-function Request:new(req)
-    local inst = {}
-    setmetatable(inst,self) 
-    self.__index = self
-    req = req or ""
-    local rl, h, b = getHttpReqParts(req)
-    local m, url, v = parseRequestLine(rl)
-    local hs = getHeaders(h)
-    inst.method = m
-    inst.url = url
-    inst.version = v
-    inst.headers = hs
-    inst.body = b
-    return inst
-end
-
 function buidReqObj(req)
     local reqObj = {}
     req = req or ""
@@ -108,13 +90,22 @@ function buidReqObj(req)
 end
 
 shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processDataCb(fn(reqObj))
-    port = port or 8080
+    port = port or 80
     connTimeOut = connTimeOut or 30
+    print("[INFO] https starts...")
+    print(string.format( "[INFO] port = %s, connTimeOut = %s" , port, connTimeOut ))
     local sv = assert(net.createServer(net.TCP, connTimeOut))
+    print("[INFO] tcp listener crated")
     sv:listen(port, function(conn)
+        print("[INFO] listen...")
         conn:on("receive", function(sck,data)
+            print("[INFO] tcp listener receive data")
+            print("[INFO] receive data is:")
+            print(data)
+            print('[INFO] --- data ends')
             local reqObj = buidReqObj(data)
             processDataCb(reqObj)
+            print("[INFO] tcp listener process data")
             sck:close()
         end)
     end)
@@ -127,4 +118,8 @@ function readAll(file)
     return content
 end
 
+
+shttps.test = function()
+    print("test")
+end
 return shttps
