@@ -1,4 +1,4 @@
-shttps = {}
+local shttps = {}
 
 local HTTP_BODY_SEP = "\r\n\r\n"
 local HTTP_HEADER_SEP = "\r\n"
