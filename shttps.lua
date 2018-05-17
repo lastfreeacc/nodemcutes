@@ -10,18 +10,42 @@ local function ltrim(s)
     return s:gsub("^%s+", "")
 end
 
-local function getHandB(req) -- returns (h string, b string)
+local function getHttpReqParts(req) -- returns (h string, b string)
     if req == nil then
         return "", ""
     end
     req = ltrim(req)
-    local i, j = req:find(HTTP_BODY_SEP)
+    local i, j = req:find(HTTP_HEADER_SEP)
     if i == nil then
-        return req, ""
+        return "", "", ""
     end
-    local h = req:sub(0,i-1)
-    local b = req:sub(j+1, req:len())
-    return h, b
+    local rl = req:sub(0,i-1)
+    req = req:sub(j+1,req:len())
+    local k, l = req:find(HTTP_BODY_SEP)
+    if k == nil then
+        return rl, req, ""
+    end
+    local h = req:sub(0,k-1)
+    local b = req:sub(l+1, req:len())
+    return rl, h, b
+end
+
+local function getRequestLine(h)
+    if h == nil then
+        return ""
+    end
+    local i, j = h:find(HTTP_HEADER_SEP)
+    if i == nil then
+        return ""
+    end
+    return h:sub(0,i-1)
+end
+
+local function parseRequestLine(l)
+    if l == nil then
+        return "", "", ""
+    end
+    return l:match("^(%S+)%s+(%S+)%s+(%S+)")
 end
 
 local function parseHeader(l)
@@ -51,24 +75,46 @@ local function getHeaders(h)
     return hs
 end
 
-local function parseReq(req)
-    local h, b = getHandB(req)
+
+local Request = {}
+function Request:new(req)
+    local inst = {}
+    setmetatable(inst,self) 
+    self.__index = self
+    req = req or ""
+    local rl, h, b = getHttpReqParts(req)
+    local m, url, v = parseRequestLine(rl)
     local hs = getHeaders(h)
-    return hs, b
+    inst.method = m
+    inst.url = url
+    inst.version = v
+    inst.headers = hs
+    inst.body = b
+    return inst
 end
 
-shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processDataCb(fn(hs, b))
-    if port == nil then
-        port = 8080
-    end
-    if connTimeOut == nil then
-        connTimeOut = 30
-    end
+function buidReqObj(req)
+    local reqObj = {}
+    req = req or ""
+    local rl, h, b = getHttpReqParts(req)
+    local m, url, v = parseRequestLine(rl)
+    local hs = getHeaders(h)
+    reqObj.method = m
+    reqObj.url = url
+    reqObj.version = v
+    reqObj.headers = hs
+    reqObj.body = b
+    return reqObj
+end
+
+shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processDataCb(fn(reqObj))
+    port = port or 8080
+    connTimeOut = connTimeOut or 30
     local sv = assert(net.createServer(net.TCP, connTimeOut))
     sv:listen(port, function(conn)
         conn:on("receive", function(sck,data)
-            local hs, b = parseReq(req)
-            processDataCb(hs, b)
+            local reqObj = buidReqObj(data)
+            processDataCb(reqObj)
             sck:close()
         end)
     end)
@@ -79,12 +125,6 @@ function readAll(file)
     local content = f:read("*all")
     f:close()
     return content
-end
-
-shttps.test = function()
-    local req = readAll("httpreq_ex.txt")
-    local hs, b = parseReq(req)
-    return "test", hs["Host"], b
 end
 
 return shttps
