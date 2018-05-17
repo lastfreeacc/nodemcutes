@@ -71,7 +71,7 @@ local function getCmd(pin)
     return data
 end
     
-sapi.do = function(url)
+sapi.doUrl = function(url)
     cmd, pin, val = parseUrl(url)
     local res = -1
     if cmd == CDM_MODE then
