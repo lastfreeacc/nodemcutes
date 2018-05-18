@@ -93,7 +93,7 @@ shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processD
     port = port or 80
     connTimeOut = connTimeOut or 30
     print("[INFO] https starts...")
-    print(string.format( "[INFO] port = %s, connTimeOut = %s" , port, connTimeOut ))
+    print(string.format( "[INFO] port = %s, connTimeOut = %s" , tostring(port), tostring(connTimeOut)))
     local sv = assert(net.createServer(net.TCP, connTimeOut))
     print("[INFO] tcp listener crated")
     sv:listen(port, function(conn)
