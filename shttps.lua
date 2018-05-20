@@ -130,7 +130,7 @@ local function buildResponseHeaders(hs)
         return ""
     end
     local h = ""
-    for k,v in hs do
+    for k,v in pairs(hs) do
         if k ~= nil then
             hl = buildHeaderline(k, v)
             h = h .. hl .. HTTP_HEADER_SEP
@@ -157,11 +157,67 @@ local function buildResponse(resp)
     return r
 end
 
+local HttpResponse = {}
+function HttpResponse:new() 
+    local instance = {}
+    local status = 200
+    local headers = {}
+    local body = ""
+    
+    function instance:status()
+        return status
+    end
+    function setStatus(code)
+        code = tonumber(code) or 200
+        status = code
+    end
+
+    function instance:headers()
+        return headers
+    end
+    function instance:setHeader(n, v)
+        if n == nil then
+            return
+        end
+        v = v or ""
+        headers[n] = v
+    end
+
+    function instance:body()
+        return body
+    end
+    function instance:setBody(b)
+        body = b or ""
+    end
+
+    function instance:build()
+        headers["Server"] = "Simple http server for nodemcu (LUA)"
+        if body ~= nil then
+            headers["Content-Length"] = string.len(body)
+        end
+        headers["Connection"] = "Closed"
+        local r = ""
+        r = r .. buildResponseStatusLine(status)
+        r = r .. buildResponseHeaders(headers)
+        r = r .. HTTP_HEADER_SEP
+        if body ~= nil then
+            r = r .. body
+        end
+        return r
+    end
+
+    return instance
+end 
+
 local function send(resp)
     local respText = buildResponse(resp)
 end
 
-
+local function onSent(sck, data)
+    print("[INFO] onSent start")
+    sck:close()
+    print("[INFO] onSent finish")
+end
 
 shttps.start = function(processDataCb, port, connTimeOut) --  processDataCb(fn(req, resp)), port(int),connTimeOut(int)
     port = port or 80
@@ -171,22 +227,24 @@ shttps.start = function(processDataCb, port, connTimeOut) --  processDataCb(fn(r
     local sv = assert(net.createServer(net.TCP, connTimeOut))
     print("[INFO] tcp listener crated")
     sv:listen(port, function(conn)
-        print("[INFO] listen...")
-        conn:on("receive", function(sck,data)
-            print("[INFO] tcp listener receive data")
+        print("[INFO] start listening...")
+        conn:on("receive", function(sck, data)
+            print("[INFO] onReceive start")
             print("[INFO] receive data is:")
             print(data)
             print('[INFO] --- data ends')
-            -- local reqObj = buildReqObj(data)
-            local reqObj = HttpRequest:new(data)
-            local respObj = {}
-            processDataCb(reqObj, respObj)
-            print("[INFO] tcp listener process data")
-            -- local responseText = buildResponse(resp)
-            -- print(responseText)
-            -- sck:send(responseText)
-            sck:close()
+            local req = HttpRequest:new(data)
+            local resp = HttpResponse:new()
+            processDataCb(req, resp)
+            local respData = resp:build()
+            print("[INFO] sent data is:")
+            print(respData)
+            print("[INFO] --- respData ends")
+            sck:send(respData)
+            print("[INFO] onReceive finish")
         end)
+        conn:on("sent", onSent)
+        print("[INFO] finish listening...")
     end)
 end
 
