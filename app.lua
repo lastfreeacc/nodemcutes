@@ -1,5 +1,5 @@
 -- app module
-M = {}
+app = {}
 
 local function isEmpty(s)
   return s == nil or s == ''
@@ -88,15 +88,15 @@ end
 
 local function printReq(req)
     print("[INFO] get req")
-    print(req.method)
-    print(req.url)
-    print(req.version)
-    for k, v in pairs(req.headers) do
+    print(req.method())
+    print(req.url())
+    print(req.version())
+    for k, v in pairs(req.headers()) do
         print(k, v)
     end
-    print(req.body)
+    print(req.body())
     sapi = require("sapi")
-    sapi.doUrl(req.url)
+    sapi.doUrl(req.url())
 end
 
 local function gotIpCb()
@@ -106,8 +106,6 @@ local function gotIpCb()
     shttps.start(printReq, 80)
     print("[INFO] server starts")
 end
-
-
 
 local function connentWifi(cfg)
     c = {}
@@ -119,7 +117,7 @@ local function connentWifi(cfg)
     wifi.sta.connect()
 end
 
-function M.start() 
+function app.start() 
     print("[INFO] app start")
     --
     LED_PIN = 0
@@ -136,4 +134,4 @@ function M.start()
     end
     return 0
 end
-return M
+return app

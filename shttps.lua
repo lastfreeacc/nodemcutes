@@ -2,6 +2,7 @@ local shttps = {}
 
 local HTTP_BODY_SEP = "\r\n\r\n"
 local HTTP_HEADER_SEP = "\r\n"
+local HTTP_VERSION = "HTTP/1.1"
 
 local function ltrim(s)
     if s == nil then
@@ -75,21 +76,94 @@ local function getHeaders(h)
     return hs
 end
 
-function buidReqObj(req)
-    local reqObj = {}
+local HttpRequest = {}
+function HttpRequest:new(req) 
+    local instance = {}
     req = req or ""
-    local rl, h, b = getHttpReqParts(req)
-    local m, url, v = parseRequestLine(rl)
-    local hs = getHeaders(h)
-    reqObj.method = m
-    reqObj.url = url
-    reqObj.version = v
-    reqObj.headers = hs
-    reqObj.body = b
-    return reqObj
+    local rl, h, body = getHttpReqParts(req)
+    local method, url, version = parseRequestLine(rl)
+    local headers = getHeaders(h)
+    
+    function instance:method()
+        return method
+    end
+
+    function instance:url()
+        return url
+    end
+
+    function instance:version()
+        return version
+    end
+
+    function instance:headers()
+        return headers
+    end
+
+    function instance:body()
+        return body
+    end
+    
+    return instance
 end
 
-shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processDataCb(fn(reqObj))
+local httpStatuses = {
+    [200] = "OK",
+    [400] = "Bad Request",
+    [500] = "Internal Server Error"
+}
+
+local function buildResponseStatusLine(status)
+    status = status or 200
+    local statusText = httpStatuses[status] or "Not Implemented"
+    return HTTP_VERSION .. " " .. status .. " " .. statusText .. HTTP_HEADER_SEP
+end
+
+local function buildHeaderline(k,v)
+    k = k or "Nil Header"
+    v = v or ""
+    return k .. ": " .. v
+end
+
+local function buildResponseHeaders(hs)
+    if hs == nil then
+        return ""
+    end
+    local h = ""
+    for k,v in hs do
+        if k ~= nil then
+            hl = buildHeaderline(k, v)
+            h = h .. hl .. HTTP_HEADER_SEP
+        end
+    end
+    return h
+end
+
+local function buildResponse(resp)
+    resp = resp or {}
+    if resp.body ~= nil then
+        body = tostring(body)
+        resp.headers["Content-Length"] = string.len(body)
+    end
+    resp.headers["Server"] = "Simple http server for nodemcu (LUA)"
+    resp.headers["Connection"] = "Closed"
+    local r = ""
+    r = r .. buildResponseStatusLine(resp.status)
+    r = r .. buildResponseHeaders(resp.headers)
+    r = r .. HTTP_HEADER_SEP
+    if resp.body ~= nil then
+        r = r .. resp.body
+    end
+    return r
+end
+
+local function send(resp)
+    local respText = buildResponse(resp)
+end
+
+
+
+shttps.start = function(processDataCb, port, connTimeOut) --  processDataCb(fn(req, resp)), port(int),connTimeOut(int)
     port = port or 80
     connTimeOut = connTimeOut or 30
     print("[INFO] https starts...")
@@ -103,9 +177,14 @@ shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processD
             print("[INFO] receive data is:")
             print(data)
             print('[INFO] --- data ends')
-            local reqObj = buidReqObj(data)
-            processDataCb(reqObj)
+            -- local reqObj = buildReqObj(data)
+            local reqObj = HttpRequest:new(data)
+            local respObj = {}
+            processDataCb(reqObj, respObj)
             print("[INFO] tcp listener process data")
+            -- local responseText = buildResponse(resp)
+            -- print(responseText)
+            -- sck:send(responseText)
             sck:close()
         end)
     end)
@@ -121,5 +200,10 @@ end
 
 shttps.test = function()
     print("test")
+    local data = "POST /cgi-bin/process.cgi HTTP/1.1\r\n"
+    print(data)
+    local r = HttpRequest:new(data)
+    print(r.url(), r.method(), r.version(), r.headers(), r.body())
 end
+
 return shttps
