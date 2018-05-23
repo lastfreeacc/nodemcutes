@@ -1,5 +1,6 @@
 -- app module
 app = {}
+sapi = require("sapi")
 
 local function isEmpty(s)
   return s == nil or s == ''
@@ -76,7 +77,7 @@ local function printReq(req)
         print(k, v)
     end
     print(req.body())
-    sapi = require("sapi")
+    
     sapi.doUrl(req.url())
 end
 
