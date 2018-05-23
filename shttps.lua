@@ -2,6 +2,7 @@ local shttps = {}
 
 local HTTP_BODY_SEP = "\r\n\r\n"
 local HTTP_HEADER_SEP = "\r\n"
+local HTTP_VERSION = "HTTP/1.1"
 
 local function ltrim(s)
     if s == nil then
@@ -75,21 +76,155 @@ local function getHeaders(h)
     return hs
 end
 
-function buidReqObj(req)
-    local reqObj = {}
+local HttpRequest = {}
+function HttpRequest:new(req) 
+    local instance = {}
     req = req or ""
-    local rl, h, b = getHttpReqParts(req)
-    local m, url, v = parseRequestLine(rl)
-    local hs = getHeaders(h)
-    reqObj.method = m
-    reqObj.url = url
-    reqObj.version = v
-    reqObj.headers = hs
-    reqObj.body = b
-    return reqObj
+    local rl, h, body = getHttpReqParts(req)
+    local method, url, version = parseRequestLine(rl)
+    local headers = getHeaders(h)
+    
+    function instance:method()
+        return method
+    end
+
+    function instance:url()
+        return url
+    end
+
+    function instance:version()
+        return version
+    end
+
+    function instance:headers()
+        return headers
+    end
+
+    function instance:body()
+        return body
+    end
+    
+    return instance
 end
 
-shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processDataCb(fn(reqObj))
+local httpStatuses = {
+    [200] = "OK",
+    [400] = "Bad Request",
+    [500] = "Internal Server Error"
+}
+
+local function buildResponseStatusLine(status)
+    status = status or 200
+    local statusText = httpStatuses[status] or "Not Implemented"
+    return HTTP_VERSION .. " " .. status .. " " .. statusText .. HTTP_HEADER_SEP
+end
+
+local function buildHeaderline(k,v)
+    k = k or "Nil Header"
+    v = v or ""
+    return k .. ": " .. v
+end
+
+local function buildResponseHeaders(hs)
+    if hs == nil then
+        return ""
+    end
+    local h = ""
+    for k,v in pairs(hs) do
+        if k ~= nil then
+            hl = buildHeaderline(k, v)
+            h = h .. hl .. HTTP_HEADER_SEP
+        end
+    end
+    return h
+end
+
+local function buildResponse(resp)
+    resp = resp or {}
+    if resp.body ~= nil then
+        body = tostring(body)
+        resp.headers["Content-Length"] = string.len(body)
+    end
+    resp.headers["Server"] = "Simple http server for nodemcu (LUA)"
+    resp.headers["Connection"] = "Closed"
+    local r = ""
+    r = r .. buildResponseStatusLine(resp.status)
+    r = r .. buildResponseHeaders(resp.headers)
+    r = r .. HTTP_HEADER_SEP
+    if resp.body ~= nil then
+        r = r .. resp.body
+    end
+    return r
+end
+
+local HttpResponse = {}
+function HttpResponse:new() 
+    local instance = {}
+    local status = 200
+    local headers = {}
+    local body = ""
+    
+    function instance:status()
+        return status
+    end
+    function setStatus(code)
+        code = tonumber(code) or 200
+        status = code
+    end
+
+    function instance:headers()
+        return headers
+    end
+    function instance:setHeader(n, v)
+        if n == nil then
+            return
+        end
+        v = v or ""
+        headers[n] = v
+    end
+
+    function instance:body()
+        return body
+    end
+    function instance:setBody(b)
+        body = b or ""
+    end
+
+    function instance:build()
+        headers["Server"] = "Simple http server for nodemcu (LUA)"
+        if body ~= nil then
+            headers["Content-Length"] = string.len(body)
+        end
+        headers["Connection"] = "Closed"
+        local r = ""
+        r = r .. buildResponseStatusLine(status)
+        r = r .. buildResponseHeaders(headers)
+        r = r .. HTTP_HEADER_SEP
+        if body ~= nil then
+            r = r .. body
+        end
+        return r
+    end
+
+    return instance
+end 
+
+local function send(resp)
+    local respText = buildResponse(resp)
+end
+
+
+local function onReceive(sck, data)
+    
+end
+
+local function onSent(sck, data)
+    print("[INFO] onSent start")
+    sck:close()
+    print("[INFO] onSent finish")
+end
+
+shttps.start = function(processDataCb, port, connTimeOut) --  processDataCb(fn(req, resp)), port(int),connTimeOut(int)
     port = port or 80
     connTimeOut = connTimeOut or 30
     print("[INFO] https starts...")
@@ -97,17 +232,24 @@ shttps.start = function(processDataCb, port, connTimeOut) -- port(int), processD
     local sv = assert(net.createServer(net.TCP, connTimeOut))
     print("[INFO] tcp listener crated")
     sv:listen(port, function(conn)
-        print("[INFO] listen...")
-        conn:on("receive", function(sck,data)
-            print("[INFO] tcp listener receive data")
+        print("[INFO] start listening...")
+        conn:on("receive", function(sck, data)
+            print("[INFO] onReceive start")
             print("[INFO] receive data is:")
             print(data)
             print('[INFO] --- data ends')
-            local reqObj = buidReqObj(data)
-            processDataCb(reqObj)
-            print("[INFO] tcp listener process data")
-            sck:close()
+            local req = HttpRequest:new(data)
+            local resp = HttpResponse:new()
+            processDataCb(req, resp)
+            local respData = resp:build()
+            print("[INFO] sent data is:")
+            print(respData)
+            print("[INFO] --- respData ends")
+            sck:send(respData)
+            print("[INFO] onReceive finish")
         end)
+        conn:on("sent", onSent)
+        print("[INFO] finish listening...")
     end)
 end
 
@@ -121,5 +263,10 @@ end
 
 shttps.test = function()
     print("test")
+    local data = "POST /cgi-bin/process.cgi HTTP/1.1\r\n"
+    print(data)
+    local r = HttpRequest:new(data)
+    print(r.url(), r.method(), r.version(), r.headers(), r.body())
 end
+
 return shttps

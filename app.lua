@@ -1,5 +1,5 @@
 -- app module
-M = {}
+app = {}
 
 local function isEmpty(s)
   return s == nil or s == ''
@@ -66,37 +66,18 @@ end
 --    print("[ERROR] too long wait wifi connection...")
 --    return -1
 --end
-local function receiver(sck, data)
-  print("[INFO] receive some data")
-  state = gpio.read(0)
-  if state == gpio.HIGH then
-    gpio.write(0, gpio.LOW)
-  else 
-    gpio.write(0, gpio.HIGH)
-  end
-  sck:close()
-end
-
-local function listenCmd()
-    sv = net.createServer(net.TCP, 30)
-    if sv then
-      sv:listen(80, function(conn)
-        conn:on("receive", receiver)
-      end)
-    end
-end
 
 local function printReq(req)
     print("[INFO] get req")
-    print(req.method)
-    print(req.url)
-    print(req.version)
-    for k, v in pairs(req.headers) do
+    print(req.method())
+    print(req.url())
+    print(req.version())
+    for k, v in pairs(req.headers()) do
         print(k, v)
     end
-    print(req.body)
+    print(req.body())
     sapi = require("sapi")
-    sapi.doUrl(req.url)
+    sapi.doUrl(req.url())
 end
 
 local function gotIpCb()
@@ -107,9 +88,8 @@ local function gotIpCb()
     print("[INFO] server starts")
 end
 
-
-
 local function connentWifi(cfg)
+    wifi.setmode(wifi.STATION)
     c = {}
     c.ssid = cfg.wifi.ssid
     c.pwd = cfg.wifi.pwd
@@ -119,12 +99,8 @@ local function connentWifi(cfg)
     wifi.sta.connect()
 end
 
-function M.start() 
+function app.start() 
     print("[INFO] app start")
-    --
-    LED_PIN = 0
-    gpio.mode(LED_PIN, gpio.OUTPUT)
-    --
     cfg = loadCfg()
     if cfg == nil then
         return -1
@@ -136,4 +112,4 @@ function M.start()
     end
     return 0
 end
-return M
+return app
