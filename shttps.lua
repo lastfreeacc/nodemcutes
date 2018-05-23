@@ -130,7 +130,11 @@ local function buildResponseHeaders(hs)
         return ""
     end
     local h = ""
+<<<<<<< HEAD
     for k,v in pairs(hs) do
+=======
+    for k,v in hs do
+>>>>>>> e7cefff736c0252ffe260abb5aa5b07609630d60
         if k ~= nil then
             hl = buildHeaderline(k, v)
             h = h .. hl .. HTTP_HEADER_SEP
@@ -157,6 +161,7 @@ local function buildResponse(resp)
     return r
 end
 
+<<<<<<< HEAD
 local HttpResponse = {}
 function HttpResponse:new() 
     local instance = {}
@@ -209,11 +214,14 @@ function HttpResponse:new()
     return instance
 end 
 
+=======
+>>>>>>> e7cefff736c0252ffe260abb5aa5b07609630d60
 local function send(resp)
     local respText = buildResponse(resp)
 end
 
 
+<<<<<<< HEAD
 local function onReceive(sck, data)
     
 end
@@ -223,6 +231,8 @@ local function onSent(sck, data)
     sck:close()
     print("[INFO] onSent finish")
 end
+=======
+>>>>>>> e7cefff736c0252ffe260abb5aa5b07609630d60
 
 shttps.start = function(processDataCb, port, connTimeOut) --  processDataCb(fn(req, resp)), port(int),connTimeOut(int)
     port = port or 80
@@ -238,6 +248,7 @@ shttps.start = function(processDataCb, port, connTimeOut) --  processDataCb(fn(r
             print("[INFO] receive data is:")
             print(data)
             print('[INFO] --- data ends')
+<<<<<<< HEAD
             local req = HttpRequest:new(data)
             local resp = HttpResponse:new()
             processDataCb(req, resp)
@@ -247,6 +258,17 @@ shttps.start = function(processDataCb, port, connTimeOut) --  processDataCb(fn(r
             print("[INFO] --- respData ends")
             sck:send(respData)
             print("[INFO] onReceive finish")
+=======
+            -- local reqObj = buildReqObj(data)
+            local reqObj = HttpRequest:new(data)
+            local respObj = {}
+            processDataCb(reqObj, respObj)
+            print("[INFO] tcp listener process data")
+            -- local responseText = buildResponse(resp)
+            -- print(responseText)
+            -- sck:send(responseText)
+            sck:close()
+>>>>>>> e7cefff736c0252ffe260abb5aa5b07609630d60
         end)
         conn:on("sent", onSent)
         print("[INFO] finish listening...")
