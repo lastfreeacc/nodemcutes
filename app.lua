@@ -1,6 +1,7 @@
 -- app module
 app = {}
 sapi = require("sapi")
+jrpc = require("jrpc")
 
 local function isEmpty(s)
   return s == nil or s == ''
@@ -38,54 +39,24 @@ local function printDevice(cfg)
     return
 end
 
---local function waitWifiOk()
---    for i = 0, 10 do
---        status = wifi.sta.status()
---        if status == wifi.STA_WRONGPWD then 
---            print("[ERROR] checkWifiStatus - STA_WRONGPWD")
---            return -1
---        elseif status == wifi.STA_APNOTFOUND then
---            print("[ERROR] checkWifiStatus - STA_APNOTFOUND")
---            return -1
---        elseif status == wifi.STA_FAIL then
---            print("[ERROR] checkWifiStatus - STA_FAIL")
---            return -1
---        elseif status == wifi.STA_CONNECTING then
---            print("[INFO] checkWifiStatus - STA_CONNECTING")
---        elseif status == wifi.STA_GOTIP then
---            print("[INFO] checkWifiStatus - STA_GOTIP")
---        elseif status == wifi.STA_IDLE then
---            print("[INFO] checkWifiStatus - STA_IDLE")
---            return 0
---        else
---            print("[ERROR] checkWifiStatus - uncknown(" .. status .. ")")
---            return -1
---        end
---        print(wifi.sta.getip())
---        tmr.delay(1000000)
---    end
---    print("[ERROR] too long wait wifi connection...")
---    return -1
---end
-
-local function printReq(req)
-    print("[INFO] get req")
-    print(req.method())
-    print(req.url())
-    print(req.version())
-    for k, v in pairs(req.headers()) do
-        print(k, v)
-    end
-    print(req.body())
+-- local function printReq(req)
+--     print("[INFO] get req")
+--     print(req.method())
+--     print(req.url())
+--     print(req.version())
+--     for k, v in pairs(req.headers()) do
+--         print(k, v)
+--     end
+--     print(req.body())
     
-    sapi.doUrl(req.url())
-end
+--     sapi.doUrl(req.url())
+-- end
 
 local function gotIpCb()
     print("[INFO] ip obtained")
     print(wifi.sta.getip())
     shttps = require("shttps")
-    shttps.start(printReq, 80)
+    shttps.start(jrpc.serve, 80)
     print("[INFO] server starts")
 end
 

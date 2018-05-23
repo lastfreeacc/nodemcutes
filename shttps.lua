@@ -1,8 +1,18 @@
 local shttps = {}
+if net == nil then
+    local msg = "net module required"
+    print("[WARNING] " .. msg)
+    error(msg,2) 
+end
 
 local HTTP_BODY_SEP = "\r\n\r\n"
 local HTTP_HEADER_SEP = "\r\n"
 local HTTP_VERSION = "HTTP/1.1"
+local httpStatuses = {
+    [200] = "OK",
+    [400] = "Bad Request",
+    [500] = "Internal Server Error"
+}
 
 local function ltrim(s)
     if s == nil then
@@ -11,7 +21,7 @@ local function ltrim(s)
     return s:gsub("^%s+", "")
 end
 
-local function getHttpReqParts(req) -- returns (h string, b string)
+local function getHttpReqParts(req) -- returns (rl string, h string, b string)
     if req == nil then
         return "", ""
     end
@@ -29,17 +39,6 @@ local function getHttpReqParts(req) -- returns (h string, b string)
     local h = req:sub(0,k-1)
     local b = req:sub(l+1, req:len())
     return rl, h, b
-end
-
-local function getRequestLine(h)
-    if h == nil then
-        return ""
-    end
-    local i, j = h:find(HTTP_HEADER_SEP)
-    if i == nil then
-        return ""
-    end
-    return h:sub(0,i-1)
 end
 
 local function parseRequestLine(l)
@@ -107,12 +106,6 @@ function HttpRequest:new(req)
     return instance
 end
 
-local httpStatuses = {
-    [200] = "OK",
-    [400] = "Bad Request",
-    [500] = "Internal Server Error"
-}
-
 local function buildResponseStatusLine(status)
     status = status or 200
     local statusText = httpStatuses[status] or "Not Implemented"
@@ -137,24 +130,6 @@ local function buildResponseHeaders(hs)
         end
     end
     return h
-end
-
-local function buildResponse(resp)
-    resp = resp or {}
-    if resp.body ~= nil then
-        body = tostring(body)
-        resp.headers["Content-Length"] = string.len(body)
-    end
-    resp.headers["Server"] = "Simple http server for nodemcu (LUA)"
-    resp.headers["Connection"] = "Closed"
-    local r = ""
-    r = r .. buildResponseStatusLine(resp.status)
-    r = r .. buildResponseHeaders(resp.headers)
-    r = r .. HTTP_HEADER_SEP
-    if resp.body ~= nil then
-        r = r .. resp.body
-    end
-    return r
 end
 
 local HttpResponse = {}
@@ -209,15 +184,6 @@ function HttpResponse:new()
     return instance
 end 
 
-local function send(resp)
-    local respText = buildResponse(resp)
-end
-
-
-local function onReceive(sck, data)
-    
-end
-
 local function onSent(sck, data)
     print("[INFO] onSent start")
     sck:close()
@@ -258,15 +224,6 @@ function readAll(file)
     local content = f:read("*all")
     f:close()
     return content
-end
-
-
-shttps.test = function()
-    print("test")
-    local data = "POST /cgi-bin/process.cgi HTTP/1.1\r\n"
-    print(data)
-    local r = HttpRequest:new(data)
-    print(r.url(), r.method(), r.version(), r.headers(), r.body())
 end
 
 return shttps
