@@ -142,7 +142,7 @@ function HttpResponse:new()
     function instance:status()
         return status
     end
-    function setStatus(code)
+    function instance:setStatus(code)
         code = tonumber(code) or 200
         status = code
     end
