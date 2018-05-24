@@ -1,6 +1,6 @@
 -- app module
 app = {}
-sapi = require("sapi")
+shttps = require("shttps")
 jrpc = require("jrpc")
 
 local function isEmpty(s)
@@ -39,23 +39,9 @@ local function printDevice(cfg)
     return
 end
 
--- local function printReq(req)
---     print("[INFO] get req")
---     print(req.method())
---     print(req.url())
---     print(req.version())
---     for k, v in pairs(req.headers()) do
---         print(k, v)
---     end
---     print(req.body())
-    
---     sapi.doUrl(req.url())
--- end
-
 local function gotIpCb()
     print("[INFO] ip obtained")
     print(wifi.sta.getip())
-    shttps = require("shttps")
     shttps.start(jrpc.serve, 80)
     print("[INFO] server starts")
 end
@@ -84,4 +70,5 @@ function app.start()
     end
     return 0
 end
+
 return app

@@ -13,6 +13,7 @@ ms["gpio.mode"] = gpio.mode
 ms["gpio.read"] = gpio.read
 ms["gpio.write"] = gpio.write
 ms["node.info"] = node.info
+ms["node.input"] = node.input
 -- TODO: add more methods
 local function buildRpcErr(code, msg, data)
     local code = code or -32603

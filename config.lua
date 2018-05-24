@@ -8,4 +8,6 @@ config.device = {}
 config.device.name = "name"
 config.device.desc = "desc"
 
+config.register = "http://host:port/repository/register"
+
 return config
