@@ -8,12 +8,18 @@ end
 local JRPC_VERSION = "2.0"
 
 -- TODO: move to conf file
-local ms = {}
-ms["gpio.mode"] = gpio.mode
-ms["gpio.read"] = gpio.read
-ms["gpio.write"] = gpio.write
-ms["node.info"] = node.info
-ms["node.input"] = node.input
+local ms = function
+    if gpio ~= nil then
+        ms["gpio.mode"] = gpio.mode
+        ms["gpio.read"] = gpio.read
+        ms["gpio.write"] = gpio.write
+    end
+    if node ~= nil then
+        ms["node.info"] = node.info
+        ms["node.input"] = node.input
+        ms["node.restart"] = node.restart
+    end
+end()
 -- TODO: add more methods
 local function buildRpcErr(code, msg, data)
     local code = code or -32603
